@@ -146,6 +146,7 @@ const updateMovie = (req, res) => {
       res.status(500).send("Error editing the movie");
     });
 };
+
 const updateUsers = (req, res) => {
   const { firstname, lastname, email, city, language } = req.body;
 
