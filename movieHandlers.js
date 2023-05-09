@@ -1,35 +1,33 @@
-const movies = [
-  {
-    id: 1,
-    title: "Citizen Kane",
-    director: "Orson Wells",
-    year: "1941",
-    colors: false,
-    duration: 120,
-  },
-  {
-    id: 2,
-    title: "The Godfather",
-    director: "Francis Ford Coppola",
-    year: "1972",
-    colors: true,
-    duration: 180,
-  },
-  {
-    id: 3,
-    title: "Pulp Fiction",
-    director: "Quentin Tarantino",
-    year: "1994",
-    color: true,
-    duration: 180,
-  },
-];
-
 const database = require("./database");
 
 const getMovies = (req, res) => {
+  const initialSql = "SELECT * FROM movies";
+  const where = [];
+
+  if (req.query.color != null) {
+    where.push({
+      column: "color",
+      value: req.query.color,
+      operator: "=",
+    });
+  }
+  if (req.query.max_duration != null) {
+    where.push({
+      column: "duration",
+      value: req.query.max_duration,
+      operator: "<=",
+    });
+  }
+
   database
-    .query("select * from movies")
+    .query(
+      where.reduce(
+        (sql, { column, operator }, index) =>
+          `${sql} ${index === 0 ? "where" : "and"} ${column} ${operator} ?`,
+        initialSql
+      ),
+      where.map(({ value }) => value)
+    )
     .then(([movies]) => {
       res.json(movies);
     })
@@ -43,7 +41,7 @@ const getMovieById = (req, res) => {
   const id = parseInt(req.params.id);
 
   database
-    .query("select * from movies where id = ?", [id])
+    .query("SELECT * FROM movies WHERE id = ?", [id])
     .then(([movies]) => {
       if (movies[0] != null) {
         res.json(movies[0]);
@@ -56,36 +54,8 @@ const getMovieById = (req, res) => {
       res.status(500).send("Error retrieving data from database");
     });
 };
-const getUsers = (req, res) => {
-  database
-    .query("select * from users")
-    .then(([users]) => {
-      res.json(users);
-    })
-    .catch((err) => {
-      console.error(err);
-      res.status(500).send("Error retrieving data from database");
-    });
-};
-const getUsersById = (req, res) => {
-  const id = parseInt(req.params.id);
 
-  database
-    .query("select * from users where id = ?", [id])
-    .then(([users]) => {
-      if (users[0] != null) {
-        res.json(users[0]);
-      } else {
-        res.status(404).send("Not Found");
-      }
-    })
-    .catch((err) => {
-      console.error(err);
-      res.status(500).send("Error retrieving data from database");
-    });
-};
-
-const postMovies = (req, res) => {
+const postMovie = (req, res) => {
   const { title, director, year, color, duration } = req.body;
 
   database
@@ -102,7 +72,102 @@ const postMovies = (req, res) => {
     });
 };
 
-const postUsers = (req, res) => {
+const updateMovie = (req, res) => {
+  const id = parseInt(req.params.id);
+  const { title, director, year, color, duration } = req.body;
+
+  database
+    .query(
+      "UPDATE movies SET title = ?, director = ?, year = ?, color = ?, duration = ? WHERE id = ?",
+      [title, director, year, color, duration, id]
+    )
+    .then(([result]) => {
+      if (result.affectedRows === 0) {
+        res.status(404).send("Not Found");
+      } else {
+        res.sendStatus(204);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("Error editing the movie");
+    });
+};
+
+const deleteMovie = (req, res) => {
+  const id = parseInt(req.params.id);
+
+  database
+    .query("DELETE FROM movies WHERE id = ?", [id])
+    .then(([result]) => {
+      if (result.affectedRows === 0) {
+        res.status(404).send("Not Found");
+      } else {
+        res.sendStatus(204);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("Error deleting the movie");
+    });
+};
+
+const getUsers = (req, res) => {
+  const initialSql = "SELECT * FROM users";
+  const where = [];
+
+  if (req.query.language != null) {
+    where.push({
+      column: "language",
+      value: req.query.language,
+      operator: "=",
+    });
+  }
+  if (req.query.city != null) {
+    where.push({
+      column: "city",
+      value: req.query.city,
+      operator: "=",
+    });
+  }
+
+  database
+    .query(
+      where.reduce(
+        (sql, { column, operator }, index) =>
+          `${sql} ${index === 0 ? "where" : "and"} ${column} ${operator} ?`,
+        initialSql
+      ),
+      where.map(({ value }) => value)
+    )
+    .then(([users]) => {
+      res.json(users);
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("Error retrieving data from database");
+    });
+};
+
+const getUsersById = (req, res) => {
+  const id = parseInt(req.params.id);
+
+  database
+    .query("SELECT * FROM users WHERE id = ?", [id])
+    .then(([users]) => {
+      if (users[0] != null) {
+        res.json(users[0]);
+      } else {
+        res.status(404).send("Not Found");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("Error retrieving data from database");
+    });
+};
+
+const postUser = (req, res) => {
   const { firstname, lastname, email, city, language } = req.body;
 
   database
@@ -119,58 +184,15 @@ const postUsers = (req, res) => {
     });
 };
 
-const updateMovie = (req, res) => {
+const updateUser = (req, res) => {
   const id = parseInt(req.params.id);
-
-  const { title, director, year, color, duration } = req.body;
-
-  database
-
-    .query(
-      "update movies set title = ?, director = ?, year = ?, color = ?, duration = ? where id = ?",
-
-      [title, director, year, color, duration, id]
-    )
-
-    .then(([result]) => {
-      if (result.affectedRows === 0) {
-        res.status(404).send("Not Found");
-      } else {
-        res.sendStatus(204);
-      }
-    })
-
-    .catch((err) => {
-      console.error(err);
-
-      res.status(500).send("Error editing the movie");
-    });
-};
-
-const updateUsers = (req, res) => {
   const { firstname, lastname, email, city, language } = req.body;
 
   database
     .query(
-      "UPDATE users(firstname, lastname, email, city, language) VALUES (?, ?, ?, ?, ?)",
-      [firstname, lastname, email, city, language]
+      "UPDATE users SET firstname = ?, lastname = ?, email = ?, city = ?, language = ? WHERE id = ?",
+      [firstname, lastname, email, city, language, id]
     )
-    .then(([result]) => {
-      res.location(`/api/users/${result.insertId}`).sendStatus(201);
-    })
-    .catch((err) => {
-      console.error(err);
-      res.status(500).send("Error saving the user");
-    });
-};
-
-const deleteMovie = (req, res) => {
-  const id = parseInt(req.params.id);
-
-  database
-
-    .query("delete from movies where id = ?", [id])
-
     .then(([result]) => {
       if (result.affectedRows === 0) {
         res.status(404).send("Not Found");
@@ -178,19 +200,17 @@ const deleteMovie = (req, res) => {
         res.sendStatus(204);
       }
     })
-
     .catch((err) => {
       console.error(err);
-
-      res.status(500).send("Error deleting the movie");
+      res.status(500).send("Error editing the user");
     });
 };
 
-const deleteUsers = (req, res) => {
+const deleteUser = (req, res) => {
   const id = parseInt(req.params.id);
 
   database
-    .query("delete from users where id = ?", [id])
+    .query("DELETE FROM users WHERE id = ?", [id])
     .then(([result]) => {
       if (result.affectedRows === 0) {
         res.status(404).send("Not Found");
@@ -207,12 +227,12 @@ const deleteUsers = (req, res) => {
 module.exports = {
   getMovies,
   getMovieById,
+  postMovie,
+  updateMovie,
+  deleteMovie,
   getUsers,
   getUsersById,
-  postMovies,
-  postUsers,
-  updateMovie,
-  updateUsers,
-  deleteMovie,
-  deleteUsers,
+  postUser,
+  updateUser,
+  deleteUser,
 };
