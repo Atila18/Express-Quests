@@ -21,16 +21,35 @@ app.get("/api/movies/:id", movieHandlers.getMovieById);
 app.get("/api/users", movieHandlers.getUsers);
 app.get("/api/users/:id", movieHandlers.getUsersById);
 
-app.post("/api/movies", movieHandlers.postMovie);
 app.post("/api/users", movieHandlers.postUser);
 
-app.put("/api/movies/:id", movieHandlers.updateMovie);
-app.put("/api/users/:id", movieHandlers.updateUser);
+app.post(
+  "/api/login",
+  userHandlers.getUserByEmailWithPasswordAndPassToNext,
+  verifyPassword
+);
 
-app.delete("/api/movies/:id", movieHandlers.deleteMovie);
-app.delete("/api/users/:id", movieHandlers.deleteUser);
+app.use(verifyToken);
 
-const { hashPassword } = require("./auth.js");
+app.post("/api/movies", verifyToken, movieHandlers.postMovie);
+app.put("/api/movies/:id", verifyToken, movieHandlers.updateMovie);
+app.delete("/api/movies/:id", verifyToken, movieHandlers.deleteMovie);
+app.put("/api/users/:id", verifyToken, movieHandlers.updateUser);
+app.delete("/api/users/:id", verifyToken, movieHandlers.deleteUser);
+
+/* const isItDwight = (req, res) => {
+  if (
+    req.body.email === "dwight@theoffice.com" &&
+    req.body.password === "123456"
+  ) {
+    res.send("Credentials are valid");
+  } else {
+    res.sendStatus(401);
+  }
+}; */
+
+const userHandlers = require("./userHandlers");
+const { hashPassword, verifyPassword, verifyToken } = require("./auth.js");
 
 app.post("/api/users", hashPassword, (req, res, next) => {
   userHandlers.postUser(req, res, (err) => {
